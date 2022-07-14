@@ -86,6 +86,33 @@ static void timer_event()
     }
 }
 
+static bool accept_event(int fd, struct input_event *ev)
+{
+    if (ev->type == EV_KEY || ev->type == EV_REL) {
+        return true;
+    }
+    if (ev->type == EV_ABS) {
+        // Triggers
+        if (ev->code == ABS_Z || ev->code == ABS_RZ) {
+            return true;
+        }
+        // D-Pad
+        if (ev->code == ABS_HAT0X || ev->code == ABS_HAT0Y) {
+            return true;
+        }
+        // Analog Sticks
+        if (ev->code == ABS_X || ev->code == ABS_Y || ev->code == ABS_RX || ev->code == ABS_RY) {
+            struct input_absinfo info;
+            if (ioctl(fd, EVIOCGABS(ev->code), &info)) {
+                return false;
+            }
+            int fuzz = (info.maximum - info.minimum) / 4;
+            return ev->value < info.minimum + fuzz || ev->value > info.maximum - fuzz;
+        }
+    }
+    return false;
+}
+
 static void device_event(int dev)
 {
     if (fds[dev].revents & (POLLERR | POLLHUP)) {
@@ -95,18 +122,25 @@ static void device_event(int dev)
         return;
     }
     int ret = 0;
+    bool accepted = false;
     struct input_event ev[128];
     while ((ret = read(fds[dev].fd, ev, sizeof(ev))) > 0) {
+        if (accepted) {
+            continue;
+        }
         for (size_t i = 0; i < ret / sizeof(struct input_event); ++i) {
-            if (ev[i].type == EV_KEY || ev[i].type == EV_REL || ev[i].type == EV_ABS) {
-                struct itimerspec timeout = {0};
-                timeout.it_value.tv_sec = timeout_sec;
-                timerfd_settime(fds[1].fd, 0, &timeout, NULL);
-                if (!idle_inhibitor) {
-                    idle_inhibitor = zwp_idle_inhibit_manager_v1_create_inhibitor(idle_inhibit, wl_surface);
-                    wl_display_flush(wl_display);
-                }
+            if (!accept_event(fds[dev].fd, &ev[i])) {
+                continue;
             }
+            struct itimerspec timeout = {0};
+            timeout.it_value.tv_sec = timeout_sec;
+            timerfd_settime(fds[1].fd, 0, &timeout, NULL);
+            if (!idle_inhibitor) {
+                idle_inhibitor = zwp_idle_inhibit_manager_v1_create_inhibitor(idle_inhibit, wl_surface);
+                wl_display_flush(wl_display);
+            }
+            accepted = true;
+            break;
         }
     }
 }
