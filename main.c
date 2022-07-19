@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
+#include <signal.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -19,6 +20,7 @@
 #define FDS_MAX JOYSTICKS_FD_START + JOYSTICKS_MAX
 static struct pollfd fds[FDS_MAX];
 
+static bool paused = false;
 static int timeout_sec = 30;
 
 struct wl_display *wl_display = NULL;
@@ -125,7 +127,7 @@ static void device_event(int dev)
     bool accepted = false;
     struct input_event ev[128];
     while ((ret = read(fds[dev].fd, ev, sizeof(ev))) > 0) {
-        if (accepted) {
+        if (accepted || paused) {
             continue;
         }
         for (size_t i = 0; i < ret / sizeof(struct input_event); ++i) {
@@ -183,8 +185,29 @@ static void print_version()
     printf("%s\n", WLJOYWAKE_VERSION);
 }
 
+static void sig_handler(int sig)
+{
+    switch (sig) {
+    case SIGUSR1:
+        paused = true;
+        break;
+    case SIGUSR2:
+        paused = false;
+        break;
+    default:
+        break;
+    }
+}
+
 int main(int argc, char *argv[])
 {
+    struct sigaction sig;
+    sig.sa_handler = sig_handler;
+    sigemptyset(&sig.sa_mask);
+    sig.sa_flags = 0;
+    sigaction(SIGUSR1, &sig, NULL);
+    sigaction(SIGUSR2, &sig, NULL);
+
     for (int i = 0; i < FDS_MAX; ++i) {
         fds[i].fd = -1;
     }
@@ -252,11 +275,7 @@ int main(int argc, char *argv[])
 
     while (1) {
         int ret = poll(fds, FDS_MAX, -1);
-        if (ret < 0) {
-            perror("poll");
-            break;
-        }
-        if (ret == 0) {
+        if (ret <= 0) {
             continue;
         }
         for (int i = 0; i < FDS_MAX; ++i) {
