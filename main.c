@@ -287,10 +287,9 @@ int main(int argc, char *argv[])
             } else if (i == 1) {
                 timer_event();
             } else if (i == 2) {
-                if (fds[i].revents & (POLLERR | POLLHUP)) {
+                if (wl_display_dispatch(wl_display) == -1) {
                     goto quit;
                 }
-                wl_display_dispatch(wl_display);
             } else {
                 device_event(i);
             }
