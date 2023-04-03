@@ -287,12 +287,16 @@ int main(int argc, char *argv[])
             } else if (i == 1) {
                 timer_event();
             } else if (i == 2) {
-                wl_display_dispatch(wl_display);
+                if (wl_display_dispatch(wl_display) == -1) {
+                    goto quit;
+                }
             } else {
                 device_event(i);
             }
         }
     }
+quit:
+    wl_display_disconnect(wl_display);
 
     return 0;
 }
