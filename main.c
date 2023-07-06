@@ -77,7 +77,7 @@ static void udev_event(struct udev_device *dev)
     udev_device_unref(dev);
 }
 
-static void timer_event()
+static void timer_event(void)
 {
     uint64_t expirations;
     read(fds[1].fd, &expirations, sizeof(uint64_t));
@@ -170,7 +170,7 @@ static const struct wl_registry_listener registry_listener = {
     .global_remove = handle_global_remove,
 };
 
-static void print_help()
+static void print_help(void)
 {
     printf("Usage: wljoywake [options]\n");
     printf("\n");
@@ -180,7 +180,7 @@ static void print_help()
     printf("  -v --version          Show version\n");
 }
 
-static void print_version()
+static void print_version(void)
 {
     printf("%s\n", WLJOYWAKE_VERSION);
 }
