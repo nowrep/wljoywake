@@ -25,8 +25,14 @@ scanner_client_header = generator(scanner, output: '@BASENAME@-client-protocol.h
 wl_protocols = dependency('wayland-protocols')
 wl_protocol_dir = wl_protocols.get_variable('pkgdatadir')
 
-protocols_src = [scanner_private_code.process(wl_protocol_dir / 'unstable/idle-inhibit/idle-inhibit-unstable-v1.xml')]
-protocols_headers = [scanner_client_header.process(wl_protocol_dir / 'unstable/idle-inhibit/idle-inhibit-unstable-v1.xml')]
+protocols = [
+  wl_protocol_dir / 'unstable/idle-inhibit/idle-inhibit-unstable-v1.xml',
+  # wlr-layer-shell references xdg_popup
+  wl_protocol_dir / 'stable/xdg-shell/xdg-shell.xml',
+  'protocol/wlr-layer-shell-unstable-v1.xml',
+  ]
+protocols_src = [scanner_private_code.process(protocols)]
+protocols_headers = [scanner_client_header.process(protocols)]
 
 wl_client = dependency('wayland-client')
 lib_protocols = static_library('protocols', protocols_src + protocols_headers, dependencies: wl_client)
