@@ -2,6 +2,10 @@
 
 Wayland tool for idle inhibit when using joysticks. Requires idle_inhibit_unstable_v1 protocol.
 
+Compositors such as sway (1.11 and newer) and river ignore inhibitors on surfaces
+that are not mapped. If the compositor supports wlr_layer_shell_unstable_v1, the
+inhibitor is attached to a transparent 1x1 layer surface.
+
     Usage: wljoywake [options]
 
     Options:
